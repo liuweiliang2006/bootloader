@@ -5,6 +5,10 @@
 #define _MAIN_H
 #include "hw_lib.h"
 
+//调试接口
+#define LOAD_APP	1
+#define DEBUG	1
+
 /*Bootloader 16K*/
 #define Bootloader_FLASHAddr 			((u32)0x08000000)	//bootloader起始地址
 #define Bootloader_FLASH_End			((u32)0x08003fff)	//bootloader结束地址
@@ -21,8 +25,8 @@
 #define Symbol_FLASHAddr					((u32)0x08024000)	//标志位存放区起始地址
 #define Symbol_FLASH_End					((u32)0x080247ff)	//标志位存放区结束地址
 #define Restart_Flag							((u32)0x08024000)	//重启标志位，该标志位bootloader与APP共用
-#define Updata_Flag								((u32)0x08024004)	//升级是否成功标志位，该标志位bootloader与APP共用
-#define StartCopy_Flag								((u32)0x08024006)	//允许拷贝标志
+#define Updata_Flag								((u32)0x08024002)	//升级是否成功标志位，该标志位bootloader与APP共用
+#define StartCopy_Flag						((u32)0x08024004)	//允许拷贝标志
 
 	
 /*预留区366K*/	

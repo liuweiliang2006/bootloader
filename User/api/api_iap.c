@@ -150,6 +150,13 @@ void Factory_Reset(void)
 		iap_write_appbin(APP_FLASHAddr+WRITEBYTE*j,g_ucBackUPApp,uc_Rem*1024);
 		memset(g_ucBackUPApp,0,LENGTH);
 	}
+	
+	FLASH_Unlock();
+	FLASH_ErasePage(Symbol_FLASHAddr);
+	FLASH_ProgramHalfWord(FlagAddr[0],0x01);
+	FLASH_ProgramHalfWord(FlagAddr[1],0x00);
+	FLASH_ProgramHalfWord(FlagAddr[2],0x00);
+	FLASH_Lock();
 }
 
 

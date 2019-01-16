@@ -58,22 +58,22 @@ int fputc(int ch, FILE *f)
 #endif 
 
 /*使用microLib的方法*/
- /* 
-int fputc(int ch, FILE *f)
-{
-	USART_SendData(USART1, (uint8_t) ch);
+ 
+//int fputc(int ch, FILE *f)
+//{
+//	USART_SendData(USART1, (uint8_t) ch);
 
-	while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET) {}	
-   
-    return ch;
-}
-int GetKey (void)  { 
+//	while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET) {}	
+//   
+//    return ch;
+//}
+//int GetKey (void)  { 
 
-    while (!(USART1->SR & USART_FLAG_RXNE));
+//    while (!(USART1->SR & USART_FLAG_RXNE));
 
-    return ((int)(USART1->DR & 0x1FF));
-}
-*/
+//    return ((int)(USART1->DR & 0x1FF));
+//}
+
  
 #if EN_USART1_RX   //如果使能了接收
 //串口1中断服务程序
@@ -88,61 +88,60 @@ u16 USART_RX_CNT=0;			//接收的字节数
 volatile static uint8_t ucRecCount=0;
 volatile static uint16_t ucSlaveDataLen=0;
 volatile static uint8_t ucRecFlag=0;
-void USART1_IRQHandler(void)
+void UART5_IRQHandler(void)
 {
 //	uint8_t  ucTemp;	
 	unsigned char rCh;
 	static u16 rCnt = 0;
-
-	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)//接收到数据
-	{	 
-		
-    	rCh = USART_ReceiveData(USART1);
-	    ucReciveBuffer[rCnt] = rCh;
-	    if(rCnt == 0)     //帧头0x5A    
-	    {
-				rCnt = (0x5A != rCh)?0:rCnt+1;
-	    }
-	    else if(rCnt == 1) //帧头0xA5  
-	    {
-				rCnt = (0xA5 != rCh)?0:rCnt+1;
-	    }
-	    else if(rCnt == 2) //长度高字节
-	    {
-				//这里可以根据类型的范围进行如上的处理
-				rCnt++;
-      }
-	    else if(rCnt == 3) //长度低字节
-	    {
-				rCnt++;
-      }
-			else if(rCnt == 4) //类型
-	    {
-				rCnt++;
-      }	
-			else if(rCnt == 5) //包序号
-	    {
-				rCnt++;
-      }	
-			else if(rCnt == 6) //帧序号
-	    {
-				rCnt++;
-      }				
-	    else if(rCnt > 6) //值value
-	    {
-				rCnt++;
-				if(rCnt == Slave_Header_Length+((ucReciveBuffer[2]<<8)+ucReciveBuffer[3]))
-				{             
-					rCnt = 0;
-//		    memcpy(ucReciveBuffer,COM6_RecvBuf,RECV_BUF_SZ);//缓冲
-//		     COM6_RecvFin = 1;  //通知主循环处理
-					ucSalvePackLen=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3])+Slave_Header_Length;
-					ucSlaveDataLen=0;
-				}				
-	    }
-		}	
 	
-	USART_ClearFlag(USART1,USART_FLAG_RXNE);
+	if(USART_GetITStatus( UART5, USART_IT_RXNE ) != RESET)
+	{	
+		rCh = USART_ReceiveData( UART5 );
+		ucReciveBuffer[rCnt] = rCh;
+		if(rCnt == 0)     //帧头0x5A    
+	  {
+			rCnt = (0x5A != rCh)?0:rCnt+1;
+	  }
+	  else if(rCnt == 1) //帧头0xA5  
+	  {
+			rCnt = (0xA5 != rCh)?0:rCnt+1;
+	  }
+	  else if(rCnt == 2) //长度高字节
+	  {
+			ucSlaveDataLen=ucReciveBuffer[rCnt];
+			rCnt++;
+    }
+	  else if(rCnt == 3) //长度低字节
+	  {
+			ucSlaveDataLen=(ucSlaveDataLen<<8)+ucReciveBuffer[rCnt];
+			rCnt = (ucSlaveDataLen>0x0200)?0:rCnt+1;
+//			rCnt++;
+    }
+		else if(rCnt == 4) //类型
+	  {
+//			rCnt = (0xE4 != rCh)?0:rCnt+1;
+			rCnt++;
+    }	
+		else if(rCnt == 5) //包序号
+	  {
+			rCnt++;
+    }	
+		else if(rCnt == 6) //帧序号
+	  {
+			rCnt++;
+    }				
+	  else if(rCnt > 6) //值value
+	  {
+			rCnt++;
+			if(rCnt == Slave_Header_Length+((ucReciveBuffer[2]<<8)+ucReciveBuffer[3]))
+			{             
+				rCnt = 0;
+				ucSalvePackLen=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3])+Slave_Header_Length;
+				ucSlaveDataLen=0;
+			}				
+	  }	
+	 } 	 
+	USART_ClearITPendingBit(UART5,USART_FLAG_RXNE);
 
 } 
 #endif	
@@ -153,7 +152,18 @@ void uart_init(u32 bound){
 //	NVIC_InitTypeDef NVIC_InitStructure;
 	 
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1|RCC_APB2Periph_GPIOA, ENABLE);	//使能USART1，GPIOA时钟以及复用功能时钟
-	RCC_AHBPeriphClockCmd(RCC_APB1Periph_USART2,ENABLE);
+	RCC_APB2PeriphClockCmd( RCC_APB2Periph_GPIOC | RCC_APB2Periph_GPIOD | RCC_APB2Periph_AFIO, ENABLE);	
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_UART5, ENABLE); 
+	
+	//usart5
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP; 
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);    
+
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;										 
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;	
+	GPIO_Init(GPIOD, &GPIO_InitStructure); 
 	
      //USART1_TX   PA.9
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9; //PA.9
@@ -179,10 +189,20 @@ void uart_init(u32 bound){
 	USART_InitStructure.USART_Parity = USART_Parity_No;//无奇偶校验位
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;//无硬件数据流控制
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	//收发模式
+	USART_Init(UART5, &USART_InitStructure); //初始化串口
+  USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
+  USART_Cmd(UART5, ENABLE);                    //使能串口 
+//	
+	USART_InitStructure.USART_BaudRate = bound;//一般设置为9600;
+	USART_InitStructure.USART_WordLength = USART_WordLength_8b;//字长为8位数据格式
+	USART_InitStructure.USART_StopBits = USART_StopBits_1;//一个停止位
+	USART_InitStructure.USART_Parity = USART_Parity_No;//无奇偶校验位
+	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;//无硬件数据流控制
+	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	//收发模式
 	USART_Init(USART1, &USART_InitStructure); //初始化串口
   USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);//开启中断
   USART_Cmd(USART1, ENABLE);                    //使能串口 
-	
+//	
 //	USART_Init(USART2, &USART_InitStructure); //初始化串口
 //	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);//开启中断
 //  USART_Cmd(USART2, ENABLE);                    //使能串口

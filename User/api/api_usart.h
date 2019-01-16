@@ -5,7 +5,7 @@
 
 
 void Master_Response_Slave(uint8_t datalength, uint8_t cmd);
-void Master_Send(uint8_t *,uint8_t );
+void Master_Send(uint8_t *data ,uint8_t len );
 u8 WriteAppData(u16);
 
 #endif

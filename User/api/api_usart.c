@@ -13,7 +13,25 @@ void Pack_Num_Count()
 
 void Master_Send(uint8_t *data ,uint8_t len )
 {
-	
+	uint8_t i,ucSendData[10],sum=0;;
+	for(i=0;i<len-1;i++)
+	{
+		if(i!=5)
+		{
+			ucSendData[i] = *(data+i);
+		}else
+		{
+			ucSendData[i] = ucPackNum;
+		}
+		if(i>=2)
+			sum+=ucSendData[i];
+	}	
+	ucSendData[len-1]=sum;
+	for(i=0;i<len;i++)
+	{
+		Usart_SendByte(UART5,ucSendData[i]);
+	}
+	Pack_Num_Count();
 }
 
 
@@ -64,7 +82,7 @@ void Master_Response_Slave(uint8_t datalength, uint8_t cmd)
 /******************发送数据**********************/	
 	for(i=0;i<8;i++)
 	{
-		Usart_SendByte(USART1,ucResponse[i]);
+		Usart_SendByte(UART5,ucResponse[i]);
 	}	
 	Pack_Num_Count();
 	__enable_irq();
@@ -72,7 +90,7 @@ void Master_Response_Slave(uint8_t datalength, uint8_t cmd)
 
 /*salve recive buff data Analysis */
 
-u8 USART_RX_BUF[USART_REC_LEN] __attribute__ ((at(0x08050000)));//接收缓冲,最大USART_REC_LEN个字节,起始地址为0X08050000.    
+//u8 USART_RX_BUF[USART_REC_LEN] __attribute__ ((at(0x08050000)));//接收缓冲,最大USART_REC_LEN个字节,起始地址为0X08050000.    
 u8 WriteAppData(u16 pos)
 {
 	ErrorStatus status = SUCCESS;
