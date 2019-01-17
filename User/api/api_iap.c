@@ -153,7 +153,7 @@ void Factory_Reset(void)
 	
 	FLASH_Unlock();
 	FLASH_ErasePage(Symbol_FLASHAddr);
-	FLASH_ProgramHalfWord(FlagAddr[0],0x01);
+	FLASH_ProgramHalfWord(FlagAddr[0],0x00);
 	FLASH_ProgramHalfWord(FlagAddr[1],0x00);
 	FLASH_ProgramHalfWord(FlagAddr[2],0x00);
 	FLASH_Lock();

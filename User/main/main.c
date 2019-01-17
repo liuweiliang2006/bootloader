@@ -19,15 +19,18 @@ int main(void)
 	
 	u8 ucFlagVal[3]={0};
 	u8 ucUpdataFlag=0,i;
+	u16 j;
 	u8 ucRestartFlag=0;
 	u8 ucReadyRec[8]={0x5A,0xA5,0x00,0x00,0xF2,0x01,0x00,0x00};
+	u8 ucUpdataSucess[9]={0x5A,0xA5,0x00,0x01,0xF3,0x01,0x00,0x01,0x00};
+	u8 ucUpdataFail[9]={0x5A,0xA5,0x00,0x01,0xF3,0x00,0x00,0x01,0x00};
 
 	Sys_Init();	
 	printf("**bootloader**\r\n");
-	delay_ms(1000);
-	delay_ms(1000);
-	delay_ms(1000);
-	delay_ms(1000);
+//	delay_ms(1000);
+//	delay_ms(1000);
+//	delay_ms(1000);
+//	delay_ms(1000);
 
 //	iap_load_app(APP_FLASHAddr);
 //	Master_Send(ucReadyRec,8);
@@ -70,10 +73,16 @@ int main(void)
 			FLASH_ProgramHalfWord(FlagAddr[0],0x01); //升级标志位置1
 			FLASH_ProgramHalfWord(FlagAddr[1],0x00); //升级标志位清零。1：成功，0：失败
 			FLASH_ProgramHalfWord(FlagAddr[2],0x00); //拷贝标志为清0，该位最终由APP来置1
-			FLASH_Lock();
-			/*发送允许发送指令*/
-			Master_Send(ucReadyRec,8);
+			FLASH_Lock();			
 			delay_ms(10);
+			/*发送允许发送指令*/
+			USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
+						
+			#ifdef DEBUG
+				printf("**send receive flag**\r\n");
+			#endif
+			
+			Master_Send(ucReadyRec,8);
 			while(1)
 			{
 				/*启动定时器*/
@@ -81,15 +90,12 @@ int main(void)
 				/*到达150ms*/
 				if(time != 1000)
 				{
-//					#ifdef DEBUG
-//						printf("**boot timer eneble**\r\n");
-//					#endif
 					/*串口接收到数据*/
 					if((ucSalvePackLen!=0) && (ucReciveBuffer[4] == 0xE4))
 					{
-						#ifdef DEBUG
-							printf("**boot receive data**\r\n");
-						#endif
+//						#ifdef DEBUG
+//							printf("**boot receive data**\r\n");
+//						#endif
 						/*关闭定时器*/
 						TIM_Cmd(TIM6, DISABLE);
 						time=0;
@@ -111,29 +117,38 @@ int main(void)
 									printf("**boot last data**\r\n");
 								#endif
 								/*更新FLASH代码 */
-								delay_ms(200);
+//								delay_ms(200);
 								/*擦除标志位存放区*/								
 //								FLASH_ErasePage(Symbol_FLASHAddr);	
-								delay_ms(500);
+//								delay_ms(500);
 								/*升级成功*/ 
 								/*更新标志位*/
 								FLASH_Unlock();
 								FLASH_ErasePage(Symbol_FLASHAddr);
-								FLASH_ProgramHalfWord(FlagAddr[0],0x01);
+								FLASH_ProgramHalfWord(FlagAddr[0],0x00);
 								FLASH_ProgramHalfWord(FlagAddr[1],0x01);
 								FLASH_ProgramHalfWord(FlagAddr[2],0x00);
 								FLASH_Lock();
 								#ifdef DEBUG
 									printf("**boot updata success**\r\n");
 								#endif
+								/*发送升级成功命令*/
+								Master_Send(ucUpdataSucess,9);
 								//执行FLASH APP代码
 								#ifdef LOAD_APP
 									iap_load_app(APP_FLASHAddr);
 								#endif
+								#ifdef DEBUG
+									printf("**jump is fail**\r\n");
+								#endif
 								
 							}
 							/*当前包已经处理完毕，发送响应至从机，从机接收些命令可发送下一包数据*/
-							Master_Response_Slave(0x00,0xE4);						
+							memset(ucReciveBuffer,0,520);
+							#ifdef DEBUG	
+								printf("**has answer**\r\n");
+							#endif
+							Master_Response_Slave(0x00,0xE4);
 						}
 						else
 						{
@@ -143,15 +158,9 @@ int main(void)
 							/*接收到数据，但是写入过程失败*/
 							/*恢复备份区程序*/
 							Factory_Reset();
-							FLASH_Unlock();
-							FLASH_ErasePage(Symbol_FLASHAddr);
-							FLASH_ProgramHalfWord(FlagAddr[0],0x01);
-							FLASH_ProgramHalfWord(FlagAddr[1],0x00);
-							FLASH_ProgramHalfWord(FlagAddr[2],0x00);
-							FLASH_Lock();
 							delay_ms(1000);
 							/*发送升级失败命令*/
-//						Master_Send(ucReadyRec,8);
+							Master_Send(ucUpdataFail,9);
 							/*升级失败*/ 
 							#ifdef LOAD_APP
 								iap_load_app(APP_FLASHAddr);
@@ -164,14 +173,14 @@ int main(void)
 					#ifdef DEBUG
 						printf("**boot time out**\r\n");
 					#endif
+					
+					
+					for(j=0;j<520;j++)
+					{
+						printf("ucReciveBuffer[%d]=0x%x\r\n",j,ucReciveBuffer[j]);
+					}
+					
 					Factory_Reset();
-					FLASH_Unlock();
-					FLASH_ErasePage(Symbol_FLASHAddr);
-					FLASH_ProgramHalfWord(FlagAddr[0],0x01);
-					FLASH_ProgramHalfWord(FlagAddr[1],0x00);
-					FLASH_ProgramHalfWord(FlagAddr[2],0x00);
-					FLASH_Lock();
-//					delay_ms(1000);
 					/*升级失败*/ 			
 					#ifdef LOAD_APP
 						iap_load_app(APP_FLASHAddr);
@@ -187,13 +196,9 @@ int main(void)
 			/*恢复备份区程序*/
 			Factory_Reset();
 			/*StartCopy_Flag拷贝标志位没有被置1，表示上次APP代码更新没有完成，不将APP的代码进行备份*/
-			FLASH_Unlock();
-			FLASH_ErasePage(Symbol_FLASHAddr);
-			FLASH_ProgramHalfWord(FlagAddr[0],0x01);
-			FLASH_ProgramHalfWord(FlagAddr[1],0x00);
-			FLASH_ProgramHalfWord(FlagAddr[2],0x00);
-			FLASH_Lock();
 		
+			/*发送升级失败命令*/
+			Master_Send(ucUpdataFail,9);
 			/*升级失败*/ 			
 			#ifdef LOAD_APP
 				iap_load_app(APP_FLASHAddr);

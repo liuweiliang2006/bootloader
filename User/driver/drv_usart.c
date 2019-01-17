@@ -137,6 +137,10 @@ void UART5_IRQHandler(void)
 			{             
 				rCnt = 0;
 				ucSalvePackLen=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3])+Slave_Header_Length;
+//				#ifdef DEBUG
+////				printf("ucSlaveDataLen=%d \r\n",ucSlaveDataLen);
+//					printf("interrupt\r\n");
+//				#endif
 				ucSlaveDataLen=0;
 			}				
 	  }	
@@ -190,7 +194,7 @@ void uart_init(u32 bound){
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;//无硬件数据流控制
 	USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;	//收发模式
 	USART_Init(UART5, &USART_InitStructure); //初始化串口
-  USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
+//  USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
   USART_Cmd(UART5, ENABLE);                    //使能串口 
 //	
 	USART_InitStructure.USART_BaudRate = bound;//一般设置为9600;

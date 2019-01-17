@@ -104,6 +104,9 @@ u8 WriteAppData(u16 pos)
 	/*判断根据接收到的数据得出的CRC与从机发送的CRC校验是否一致*/
 	if((ucSlaveCrcCheckSum&0xff)==ucReciveBuffer[ucSalvePackLen-1])  
 	{
+//		#ifdef DEBUG
+//			printf("CRC is right!\r\n");
+//		#endif
 		/*校验无误，将接收到的数据与入APP区	*/
 		status =iap_write_appbin((u32)APP_FLASHAddr+pos,&ucReciveBuffer[7],(ucReciveBuffer[2]<<8)+ucReciveBuffer[3]);	
 		if(status != SUCCESS)
@@ -112,7 +115,13 @@ u8 WriteAppData(u16 pos)
 		}
 	}
 	else
+	{
+//		#ifdef DEBUG
+//			printf("CRC is wrong!\r\n");
+//		#endif
 		return ERROR;
+	}
+		
 	
 	return SUCCESS;
 
