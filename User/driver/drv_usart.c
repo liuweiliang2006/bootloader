@@ -98,6 +98,7 @@ void UART5_IRQHandler(void)
 	{	
 		rCh = USART_ReceiveData( UART5 );
 		ucReciveBuffer[rCnt] = rCh;
+		
 		if(rCnt == 0)     //÷°Õ∑0x5A    
 	  {
 			rCnt = (0x5A != rCh)?0:rCnt+1;
@@ -115,7 +116,10 @@ void UART5_IRQHandler(void)
 	  {
 			ucSlaveDataLen=(ucSlaveDataLen<<8)+ucReciveBuffer[rCnt];
 			rCnt = (ucSlaveDataLen>0x0200)?0:rCnt+1;
-//			rCnt++;
+//				#ifdef DEBUG
+//					printf("ucSlaveDataLen=%d \r\n",ucSlaveDataLen);
+////					printf("interrupt\r\n");
+//				#endif
     }
 		else if(rCnt == 4) //¿‡–Õ
 	  {
@@ -145,6 +149,7 @@ void UART5_IRQHandler(void)
 			}				
 	  }	
 	 } 	 
+	rCh=0;
 	USART_ClearITPendingBit(UART5,USART_FLAG_RXNE);
 
 } 

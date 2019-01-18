@@ -3,7 +3,7 @@
 
 
 u32 time;
-uint8_t ucReciveBuffer[512+8];
+uint8_t ucReciveBuffer[530];
 uint16_t ucSalvePackLen=0;
 uint8_t g_ucBackUPApp[LENGTH]={0};
 
@@ -93,6 +93,7 @@ int main(void)
 					/*串口接收到数据*/
 					if((ucSalvePackLen!=0) && (ucReciveBuffer[4] == 0xE4))
 					{
+//							USART_ITConfig(UART5, USART_IT_RXNE, DISABLE);//关闭中断
 //						#ifdef DEBUG
 //							printf("**boot receive data**\r\n");
 //						#endif
@@ -148,6 +149,7 @@ int main(void)
 							#ifdef DEBUG	
 								printf("**has answer**\r\n");
 							#endif
+//							USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
 							Master_Response_Slave(0x00,0xE4);
 						}
 						else
