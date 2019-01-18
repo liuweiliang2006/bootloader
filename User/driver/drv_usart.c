@@ -141,10 +141,12 @@ void UART5_IRQHandler(void)
 			{             
 				rCnt = 0;
 				ucSalvePackLen=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3])+Slave_Header_Length;
-//				#ifdef DEBUG
-////				printf("ucSlaveDataLen=%d \r\n",ucSlaveDataLen);
-//					printf("interrupt\r\n");
-//				#endif
+				if(ucReciveBuffer[4] == g_ucCmd)
+				{
+					g_ucSendFlag=1;
+				}
+//				if(ucReciveBuffer[4] == 0xE4)
+//					g_ucFrameNumCur = ucReciveBuffer[6];
 				ucSlaveDataLen=0;
 			}				
 	  }	

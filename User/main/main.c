@@ -3,7 +3,7 @@
 
 
 u32 time;
-uint8_t ucReciveBuffer[530];
+uint8_t ucReciveBuffer[520];
 uint16_t ucSalvePackLen=0;
 uint8_t g_ucBackUPApp[LENGTH]={0};
 
@@ -14,12 +14,14 @@ static u16 applenth=0;
 const u8 temp_flag  __attribute__ ((at(0x08024000))) = 0;
 const u8 temp_flag1  __attribute__ ((at(0x08024004))) = 0;
 u32 FlagAddr[3]={Restart_Flag,Updata_Flag,StartCopy_Flag};
+u8 g_ucSendFlag=0;
+u8 g_ucCmd=0;
 int main(void)
-{	
-	
+{
 	u8 ucFlagVal[3]={0};
 	u8 ucUpdataFlag=0,i;
-	u16 j;
+	u8 ucSendCount=0;
+//	u16 j;
 	u8 ucRestartFlag=0;
 	u8 ucReadyRec[8]={0x5A,0xA5,0x00,0x00,0xF2,0x01,0x00,0x00};
 	u8 ucUpdataSucess[9]={0x5A,0xA5,0x00,0x01,0xF3,0x01,0x00,0x01,0x00};
@@ -81,8 +83,17 @@ int main(void)
 			#ifdef DEBUG
 				printf("**send receive flag**\r\n");
 			#endif
-			
-			Master_Send(ucReadyRec,8);
+			g_ucSendFlag=0;
+			for(ucSendCount=0; ucSendCount<3; ucSendCount++)
+			{
+				Master_Send(ucReadyRec,8);				
+				g_ucCmd=ucReadyRec[4];
+				delay_ms(100);
+				if(g_ucSendFlag==1)
+					break;
+			}
+			ucSalvePackLen=0;
+			memset(ucReciveBuffer,0,520);
 			while(1)
 			{
 				/*启动定时器*/
@@ -104,9 +115,9 @@ int main(void)
 						/*校验成功，并将数据存放在的APP地址区，地址：0x08004000开始*/
 						if(WriteAppData(applenth) == SUCCESS )
 						{
-							#ifdef DEBUG
-								printf("**boot write data success**\r\n");
-							#endif
+//							#ifdef DEBUG
+//								printf("**boot write data success**\r\n");
+//							#endif
 							/*接收到数据并且写入成功*/
 							/*累加包内数据的长度，作为下次写入的偏移*/
 							applenth+=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3]);
@@ -134,7 +145,16 @@ int main(void)
 									printf("**boot updata success**\r\n");
 								#endif
 								/*发送升级成功命令*/
-								Master_Send(ucUpdataSucess,9);
+								g_ucSendFlag=0;
+								for(ucSendCount=0; ucSendCount<3; ucSendCount++)
+								{
+									Master_Send(ucUpdataSucess,9);
+									g_ucCmd=ucUpdataSucess[4];
+									delay_ms(100);
+									if(g_ucSendFlag==1)
+										break;
+								}
+								
 								//执行FLASH APP代码
 								#ifdef LOAD_APP
 									iap_load_app(APP_FLASHAddr);
@@ -146,10 +166,10 @@ int main(void)
 							}
 							/*当前包已经处理完毕，发送响应至从机，从机接收些命令可发送下一包数据*/
 							memset(ucReciveBuffer,0,520);
-							#ifdef DEBUG	
-								printf("**has answer**\r\n");
-							#endif
-//							USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
+//							#ifdef DEBUG	
+//								printf("**has answer**\r\n");
+//							#endif
+							ucSalvePackLen=0;
 							Master_Response_Slave(0x00,0xE4);
 						}
 						else
@@ -161,8 +181,18 @@ int main(void)
 							/*恢复备份区程序*/
 							Factory_Reset();
 							delay_ms(1000);
-							/*发送升级失败命令*/
-							Master_Send(ucUpdataFail,9);
+							
+							/*发送升级失败命令*/							
+							g_ucSendFlag=0;
+							for(ucSendCount=0; ucSendCount<3; ucSendCount++)
+							{
+								Master_Send(ucUpdataFail,9);
+								g_ucCmd=ucUpdataFail[4];
+								delay_ms(100);
+								if(g_ucSendFlag==1)
+									break;
+							}
+							memset(ucReciveBuffer,0,520);
 							/*升级失败*/ 
 							#ifdef LOAD_APP
 								iap_load_app(APP_FLASHAddr);
@@ -175,14 +205,18 @@ int main(void)
 					#ifdef DEBUG
 						printf("**boot time out**\r\n");
 					#endif
-					
-					
-					for(j=0;j<520;j++)
+					Factory_Reset();					
+					g_ucSendFlag=0;
+					for(ucSendCount=0; ucSendCount<3; ucSendCount++)
 					{
-						printf("ucReciveBuffer[%d]=0x%x\r\n",j,ucReciveBuffer[j]);
+						Master_Send(ucUpdataFail,9);
+						g_ucCmd=ucUpdataFail[4];
+						delay_ms(100);
+						if(g_ucSendFlag==1)
+							break;
 					}
+					memset(ucReciveBuffer,0,520);
 					
-					Factory_Reset();
 					/*升级失败*/ 			
 					#ifdef LOAD_APP
 						iap_load_app(APP_FLASHAddr);
@@ -200,7 +234,17 @@ int main(void)
 			/*StartCopy_Flag拷贝标志位没有被置1，表示上次APP代码更新没有完成，不将APP的代码进行备份*/
 		
 			/*发送升级失败命令*/
-			Master_Send(ucUpdataFail,9);
+			g_ucSendFlag=0;
+			for(ucSendCount=0; ucSendCount<3; ucSendCount++)
+			{
+				Master_Send(ucUpdataFail,9);
+				g_ucCmd=ucUpdataFail[4];
+				delay_ms(100);
+				if(g_ucSendFlag==1)
+					break;
+			}
+			memset(ucReciveBuffer,0,520);
+			
 			/*升级失败*/ 			
 			#ifdef LOAD_APP
 				iap_load_app(APP_FLASHAddr);

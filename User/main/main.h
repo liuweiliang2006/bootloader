@@ -37,8 +37,12 @@
 
 typedef enum {UPDATE = 1, NOT_UPDATE = !UPDATE} RestartFlag; //flash只能由1变成0
 
-extern uint8_t ucReciveBuffer[530];
+extern uint8_t ucReciveBuffer[520];
 extern uint16_t ucSalvePackLen;
 extern uint8_t g_ucBackUPApp[LENGTH];
 extern u32 FlagAddr[3];
+
+extern u8 g_ucSendFlag;
+extern u8 g_ucCmd;
+extern u16 g_ucFrameNumPre,g_ucFrameNumCur;
 #endif
