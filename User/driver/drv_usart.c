@@ -145,8 +145,14 @@ void UART5_IRQHandler(void)
 				{
 					g_ucSendFlag=1;
 				}
-//				if(ucReciveBuffer[4] == 0xE4)
-//					g_ucFrameNumCur = ucReciveBuffer[6];
+				if(ucReciveBuffer[4] == 0xE4)
+				{
+					g_ucFrameNumCur = ucReciveBuffer[6];
+					
+//					#ifdef DEBUG
+//						printf("**g_ucFrameNumCur=[%d]**\r\n",g_ucFrameNumCur);
+//					#endif
+				}					
 				ucSlaveDataLen=0;
 			}				
 	  }	

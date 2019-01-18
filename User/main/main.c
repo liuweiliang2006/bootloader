@@ -16,6 +16,8 @@ const u8 temp_flag1  __attribute__ ((at(0x08024004))) = 0;
 u32 FlagAddr[3]={Restart_Flag,Updata_Flag,StartCopy_Flag};
 u8 g_ucSendFlag=0;
 u8 g_ucCmd=0;
+
+u16 g_ucFrameNumPre=0,g_ucFrameNumCur=0;
 int main(void)
 {
 	u8 ucFlagVal[3]={0};
@@ -92,111 +94,116 @@ int main(void)
 				if(g_ucSendFlag==1)
 					break;
 			}
+			g_ucFrameNumPre=g_ucFrameNumCur;
 			ucSalvePackLen=0;
 			memset(ucReciveBuffer,0,520);
 			while(1)
 			{
 				/*启动定时器*/
 				TIM_Cmd(TIM6, ENABLE);
-				/*到达150ms*/
+				/*到达1s*/
 				if(time != 1000)
 				{
 					/*串口接收到数据*/
 					if((ucSalvePackLen!=0) && (ucReciveBuffer[4] == 0xE4))
 					{
-//							USART_ITConfig(UART5, USART_IT_RXNE, DISABLE);//关闭中断
+						if((g_ucFrameNumCur == 0) || ((g_ucFrameNumCur !=0)&&((g_ucFrameNumCur-g_ucFrameNumPre) == 1)))
+						{
+							g_ucFrameNumPre=g_ucFrameNumCur;
+							//							USART_ITConfig(UART5, USART_IT_RXNE, DISABLE);//关闭中断
 //						#ifdef DEBUG
 //							printf("**boot receive data**\r\n");
 //						#endif
-						/*关闭定时器*/
-						TIM_Cmd(TIM6, DISABLE);
-						time=0;
+							/*关闭定时器*/
+							TIM_Cmd(TIM6, DISABLE);
+							time=0;
 					
 						/*校验成功，并将数据存放在的APP地址区，地址：0x08004000开始*/
-						if(WriteAppData(applenth) == SUCCESS )
-						{
+							if(WriteAppData(applenth) == SUCCESS )
+							{
 //							#ifdef DEBUG
 //								printf("**boot write data success**\r\n");
 //							#endif
-							/*接收到数据并且写入成功*/
-							/*累加包内数据的长度，作为下次写入的偏移*/
-							applenth+=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3]);
-							ucSalvePackLen=0;
-							/*判断是否为尾帧*/
-							if(ucReciveBuffer[6] == 0)
-							{
-								#ifdef DEBUG
-									printf("**boot last data**\r\n");
-								#endif
+								/*接收到数据并且写入成功*/
+								/*累加包内数据的长度，作为下次写入的偏移*/
+								applenth+=((ucReciveBuffer[2]<<8)+ucReciveBuffer[3]);
+								ucSalvePackLen=0;
+								/*判断是否为尾帧*/
+								if(ucReciveBuffer[6] == 0)
+								{
+									#ifdef DEBUG
+										printf("**boot last data**\r\n");
+									#endif
 								/*更新FLASH代码 */
 //								delay_ms(200);
 								/*擦除标志位存放区*/								
 //								FLASH_ErasePage(Symbol_FLASHAddr);	
 //								delay_ms(500);
-								/*升级成功*/ 
-								/*更新标志位*/
-								FLASH_Unlock();
-								FLASH_ErasePage(Symbol_FLASHAddr);
-								FLASH_ProgramHalfWord(FlagAddr[0],0x00);
-								FLASH_ProgramHalfWord(FlagAddr[1],0x01);
-								FLASH_ProgramHalfWord(FlagAddr[2],0x00);
-								FLASH_Lock();
+									/*升级成功*/ 
+									/*更新标志位*/
+									FLASH_Unlock();
+									FLASH_ErasePage(Symbol_FLASHAddr);
+									FLASH_ProgramHalfWord(FlagAddr[0],0x00);
+									FLASH_ProgramHalfWord(FlagAddr[1],0x01);
+									FLASH_ProgramHalfWord(FlagAddr[2],0x00);
+									FLASH_Lock();
+									#ifdef DEBUG
+										printf("**boot updata success**\r\n");
+									#endif
+									/*发送升级成功命令*/
+									g_ucSendFlag=0;
+									for(ucSendCount=0; ucSendCount<3; ucSendCount++)
+									{
+										Master_Send(ucUpdataSucess,9);
+										g_ucCmd=ucUpdataSucess[4];
+										delay_ms(100);
+										if(g_ucSendFlag==1)
+											break;
+									}
+								
+									//执行FLASH APP代码
+									#ifdef LOAD_APP
+										iap_load_app(APP_FLASHAddr);
+									#endif
+									#ifdef DEBUG
+										printf("**jump is fail**\r\n");
+									#endif
+								
+								}
+								/*当前包已经处理完毕，发送响应至从机，从机接收些命令可发送下一包数据*/
+								memset(ucReciveBuffer,0,520);
+//							#ifdef DEBUG	
+//								printf("**has answer**\r\n");
+//							#endif
+								ucSalvePackLen=0;
+								Master_Response_Slave(0x00,0xE4);
+							}
+							else
+							{
 								#ifdef DEBUG
-									printf("**boot updata success**\r\n");
+									printf("**boot receive worng**\r\n");
 								#endif
-								/*发送升级成功命令*/
+								/*接收到数据，但是写入过程失败*/
+								/*恢复备份区程序*/
+								Factory_Reset();
+								delay_ms(1000);
+							
+								/*发送升级失败命令*/							
 								g_ucSendFlag=0;
 								for(ucSendCount=0; ucSendCount<3; ucSendCount++)
 								{
-									Master_Send(ucUpdataSucess,9);
-									g_ucCmd=ucUpdataSucess[4];
+									Master_Send(ucUpdataFail,9);
+									g_ucCmd=ucUpdataFail[4];
 									delay_ms(100);
 									if(g_ucSendFlag==1)
 										break;
 								}
-								
-								//执行FLASH APP代码
+								memset(ucReciveBuffer,0,520);
+								/*升级失败*/ 
 								#ifdef LOAD_APP
 									iap_load_app(APP_FLASHAddr);
-								#endif
-								#ifdef DEBUG
-									printf("**jump is fail**\r\n");
-								#endif
-								
+								#endif					
 							}
-							/*当前包已经处理完毕，发送响应至从机，从机接收些命令可发送下一包数据*/
-							memset(ucReciveBuffer,0,520);
-//							#ifdef DEBUG	
-//								printf("**has answer**\r\n");
-//							#endif
-							ucSalvePackLen=0;
-							Master_Response_Slave(0x00,0xE4);
-						}
-						else
-						{
-							#ifdef DEBUG
-								printf("**boot receive worng**\r\n");
-							#endif
-							/*接收到数据，但是写入过程失败*/
-							/*恢复备份区程序*/
-							Factory_Reset();
-							delay_ms(1000);
-							
-							/*发送升级失败命令*/							
-							g_ucSendFlag=0;
-							for(ucSendCount=0; ucSendCount<3; ucSendCount++)
-							{
-								Master_Send(ucUpdataFail,9);
-								g_ucCmd=ucUpdataFail[4];
-								delay_ms(100);
-								if(g_ucSendFlag==1)
-									break;
-							}
-							memset(ucReciveBuffer,0,520);
-							/*升级失败*/ 
-							#ifdef LOAD_APP
-								iap_load_app(APP_FLASHAddr);
-							#endif					
 						}
 					}
 				}
