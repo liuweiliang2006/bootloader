@@ -30,11 +30,14 @@ void NVIC_Configuration()
 
 void Sys_Init()
 {
+
+//	GPIO_DeInit(GPIOA);
+//	GPIO_DeInit(GPIOB);
 	NVIC_Configuration();
 	
 	uart_init(115200);	
 	delay_init();	   	 	//延时初始化 	
-//	LED_Init();		  		//初始化与LED连接的硬件接口
+	LED_Init();		  		//初始化与LED连接的硬件接口
 //  KEY_Init();				//按键初始化
 	TIMx_Configuration(); 
 	

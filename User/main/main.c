@@ -18,6 +18,17 @@ u8 g_ucSendFlag=0;
 u8 g_ucCmd=0;
 
 u16 g_ucFrameNumPre=0,g_ucFrameNumCur=0;
+
+void delay_100us(u32 count)
+{
+		u32 i,j;
+		
+		for(j=0; j<count; j++)
+		{
+			 for(i=0;i<660;i++);
+		}
+}
+
 int main(void)
 {
 	u8 ucFlagVal[3]={0};
@@ -29,8 +40,27 @@ int main(void)
 	u8 ucUpdataSucess[9]={0x5A,0xA5,0x00,0x01,0xF3,0x01,0x00,0x01,0x00};
 	u8 ucUpdataFail[9]={0x5A,0xA5,0x00,0x01,0xF3,0x00,0x00,0x01,0x00};
 
+	delay_100us(2000); 
+	delay_100us(2000);
+	delay_100us(2000); 
+	delay_100us(2000);
+	
 	Sys_Init();	
 	printf("**bootloader**\r\n");
+	
+//	GPIO_ResetBits(GPIOA, GPIO_Pin_15);
+//	GPIO_ResetBits(GPIOB, GPIO_Pin_3);
+//	GPIO_ResetBits(GPIOB, GPIO_Pin_4);
+//	GPIO_ResetBits(GPIOB, GPIO_Pin_5);
+//	
+//	GPIO_SetBits(GPIOB, GPIO_Pin_3);
+//	GPIO_SetBits(GPIOB, GPIO_Pin_4);
+//	GPIO_SetBits(GPIOB, GPIO_Pin_5);
+//	GPIO_SetBits(GPIOA, GPIO_Pin_15);
+
+//	FLASH_Unlock();
+//	FLASH_EraseAllPages();
+//	FLASH_Lock();
 //	delay_ms(1000);
 //	delay_ms(1000);
 //	delay_ms(1000);
@@ -56,14 +86,14 @@ int main(void)
 
 	if((ucFlagVal[0] & 0x01) == UPDATE)
 	{ //app程序将 升级标志位置1 表示有需要升级程序
-		#ifdef DEBUG
-				printf("**boot RestartFlag eneble**\r\n");
-		#endif
+//		#ifdef DEBUG
+//				printf("**boot RestartFlag eneble**\r\n");
+//		#endif
 		if((ucFlagVal[2] & 0x01)==0x01)
 		{ //APP内的数据正确，可将之拷贝至备份区
-			#ifdef DEBUG
-				printf("**boot StartCopyFlag eneble**\r\n");
-			#endif		
+//			#ifdef DEBUG
+//				printf("**boot StartCopyFlag eneble**\r\n");
+//			#endif		
 			//应用程序备份
 			BackUP_APP();
 					
@@ -82,9 +112,9 @@ int main(void)
 			/*发送允许发送指令*/
 			USART_ITConfig(UART5, USART_IT_RXNE, ENABLE);//开启中断
 						
-			#ifdef DEBUG
-				printf("**send receive flag**\r\n");
-			#endif
+//			#ifdef DEBUG
+//				printf("**send receive flag**\r\n");
+//			#endif
 			g_ucSendFlag=0;
 			for(ucSendCount=0; ucSendCount<3; ucSendCount++)
 			{
@@ -109,8 +139,12 @@ int main(void)
 					{
 						if((g_ucFrameNumCur == 0) || ((g_ucFrameNumCur !=0)&&((g_ucFrameNumCur-g_ucFrameNumPre) == 1)))
 						{
+							GPIO_SetBits(GPIOA, GPIO_Pin_15);
+							GPIO_SetBits(GPIOB, GPIO_Pin_3);
+							GPIO_SetBits(GPIOB, GPIO_Pin_4);
+							GPIO_SetBits(GPIOB, GPIO_Pin_5);
+							
 							g_ucFrameNumPre=g_ucFrameNumCur;
-							//							USART_ITConfig(UART5, USART_IT_RXNE, DISABLE);//关闭中断
 //						#ifdef DEBUG
 //							printf("**boot receive data**\r\n");
 //						#endif
@@ -131,9 +165,9 @@ int main(void)
 								/*判断是否为尾帧*/
 								if(ucReciveBuffer[6] == 0)
 								{
-									#ifdef DEBUG
-										printf("**boot last data**\r\n");
-									#endif
+//									#ifdef DEBUG
+//										printf("**boot last data**\r\n");
+//									#endif
 								/*更新FLASH代码 */
 //								delay_ms(200);
 								/*擦除标志位存放区*/								
@@ -170,6 +204,12 @@ int main(void)
 									#endif
 								
 								}
+								GPIO_ResetBits(GPIOA, GPIO_Pin_15);
+								GPIO_ResetBits(GPIOB, GPIO_Pin_3);
+								GPIO_ResetBits(GPIOB, GPIO_Pin_4);
+								GPIO_ResetBits(GPIOB, GPIO_Pin_5);
+//								GPIO_ResetBits(GPIOB, GPIO_Pin_3);
+
 								/*当前包已经处理完毕，发送响应至从机，从机接收些命令可发送下一包数据*/
 								memset(ucReciveBuffer,0,520);
 //							#ifdef DEBUG	
@@ -233,9 +273,9 @@ int main(void)
 		}
 		else
 		{
-			#ifdef DEBUG
-				printf("**boot StartCopyFlag disabled**\r\n");
-			#endif	
+//			#ifdef DEBUG
+//				printf("**boot StartCopyFlag disabled**\r\n");
+//			#endif	
 			/*恢复备份区程序*/
 			Factory_Reset();
 			/*StartCopy_Flag拷贝标志位没有被置1，表示上次APP代码更新没有完成，不将APP的代码进行备份*/
