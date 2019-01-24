@@ -39,10 +39,5 @@ void Sys_Init()
 	delay_init();	   	 	//延时初始化 	
 	LED_Init();		  		//初始化与LED连接的硬件接口
 //  KEY_Init();				//按键初始化
-	TIMx_Configuration(); 
-	
-	
-
-
-	
+	TIMx_Configuration(); 	
 }
