@@ -40,4 +40,5 @@ void Sys_Init()
 	LED_Init();		  		//初始化与LED连接的硬件接口
 //  KEY_Init();				//按键初始化
 	TIMx_Configuration(); 	
+	AES_Init(AES128key);
 }

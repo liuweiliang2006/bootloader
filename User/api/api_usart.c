@@ -2,6 +2,7 @@
 
 
 static uint8_t ucPackNum=1;
+extern unsigned char AES_IV[16];
 //数据包序号，每发送一包完成，自动加1，取值范围 1-255
 void Pack_Num_Count()
 {
@@ -94,8 +95,13 @@ void Master_Response_Slave(uint8_t datalength, uint8_t cmd)
 u8 WriteAppData(u16 pos)
 {
 	ErrorStatus status = SUCCESS;
-	uint16_t i;
+	uint16_t i,j;
+	uint8_t ucCopyBuf[256],ucAESBuf[512];
 	uint16_t ucSlaveCrcCheckSum=0;
+	uint16_t DataLen;
+	
+	DataLen=(ucReciveBuffer[2]<<8)+ucReciveBuffer[3];
+	
 	 /*计算接收包的CRC校验 except slave data CRC*/
 	for(i=2;i<ucSalvePackLen-1;i++)
 	{		
@@ -104,15 +110,62 @@ u8 WriteAppData(u16 pos)
 	/*判断根据接收到的数据得出的CRC与从机发送的CRC校验是否一致*/
 	if((ucSlaveCrcCheckSum&0xff)==ucReciveBuffer[ucSalvePackLen-1])  
 	{
-//		#ifdef DEBUG
-//			printf("CRC is right!\r\n");
-//		#endif
-		/*校验无误，将接收到的数据与入APP区	*/
-		status =iap_write_appbin((u32)APP_FLASHAddr+pos,&ucReciveBuffer[7],(ucReciveBuffer[2]<<8)+ucReciveBuffer[3]);	
-		if(status != SUCCESS)
+		/*判断长度是否为16的整数倍，解密数据长度必须为AES_KEY_LENGTH/8的整倍数*/
+		if(DataLen%16 == 0)
+		{	
+			if(g_ucFrameNumCur != 0)
+			{
+				for(j=0;j<DataLen/256;j++)
+				{
+					memcpy(ucCopyBuf,&ucReciveBuffer[7+j*256],256);
+					/*            明文               密文    长度 初始化向量*/
+					AES_Decrypt(&ucAESBuf[j*256], ucCopyBuf, 256, AES_IV);     //解密
+				}				
+			}
+			else
+			{
+				for(j=0;j<DataLen/256;j++)
+				{
+					memcpy(ucCopyBuf,&ucReciveBuffer[7+j*256],256);
+					/*            明文             密文      长度   初始化向量*/
+					AES_Decrypt(&ucAESBuf[j*256], ucCopyBuf, 256, AES_IV);     //解密
+				}
+				memset(ucCopyBuf,0,256);
+				memcpy(ucCopyBuf,&ucReciveBuffer[7+j*256],DataLen%256);
+				/*            明文               密文      长度   初始化向量*/
+				AES_Decrypt(&ucAESBuf[j*256], ucCopyBuf, DataLen%256, AES_IV);     //解密
+			}
+//			
+//			for(j=0;j<DataLen;j++)
+//			{
+//				#ifdef DEBUG
+//					printf("0x%02x ",ucAESBuf[j]);
+//				#endif
+//			}
+			
+			
+			/*校验无误，将接收到的数据与入APP区	*/
+			status =iap_write_appbin((u32)APP_FLASHAddr+pos,ucAESBuf,DataLen);	
+			memset(ucAESBuf,0,520);
+			if(status != SUCCESS)
+			{
+			return ERROR;
+			}
+		}
+		else
 		{
 			return ERROR;
 		}
+		/*校验无误，将接收到的数据与入APP区	*/
+//		status =iap_write_appbin((u32)APP_FLASHAddr+pos,&ucReciveBuffer[7],DataLen);	
+//		if(status != SUCCESS)
+//		{
+//			return ERROR;
+//		}
+//		#ifdef DEBUG
+//			printf("CRC is right!\r\n");
+//		#endif
+		
 	}
 	else
 	{

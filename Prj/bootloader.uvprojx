@@ -335,7 +335,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>..\Libraries\core;..\Libraries\STM32F10x_StdPeriph_Driver\inc;..\User\api;..\User\driver;..\User\main</IncludePath>
+              <IncludePath>..\Libraries\core;..\Libraries\STM32F10x_StdPeriph_Driver\inc;..\User\api;..\User\driver;..\User\main;..\User\AES</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -598,6 +598,21 @@
               <FileName>readme.txt</FileName>
               <FileType>5</FileType>
               <FilePath>..\User\Doc\readme.txt</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>AES</GroupName>
+          <Files>
+            <File>
+              <FileName>AES.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\AES\AES.c</FilePath>
+            </File>
+            <File>
+              <FileName>track_fun_AES.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\User\AES\track_fun_AES.c</FilePath>
             </File>
           </Files>
         </Group>
