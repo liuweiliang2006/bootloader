@@ -120,6 +120,7 @@ u8 WriteAppData(u16 pos)
 					memcpy(ucCopyBuf,&ucReciveBuffer[7+j*256],256);
 					/*            明文               密文    长度 初始化向量*/
 					AES_Decrypt(&ucAESBuf[j*256], ucCopyBuf, 256, AES_IV);     //解密
+					memset(ucCopyBuf,0,256);
 				}				
 			}
 			else
@@ -135,16 +136,9 @@ u8 WriteAppData(u16 pos)
 				/*            明文               密文      长度   初始化向量*/
 				AES_Decrypt(&ucAESBuf[j*256], ucCopyBuf, DataLen%256, AES_IV);     //解密
 			}
-//			
-//			for(j=0;j<DataLen;j++)
-//			{
-//				#ifdef DEBUG
-//					printf("0x%02x ",ucAESBuf[j]);
-//				#endif
-//			}
-			
 			
 			/*校验无误，将接收到的数据与入APP区	*/
+			/*                                     地址        数据     长度*/
 			status =iap_write_appbin((u32)APP_FLASHAddr+pos,ucAESBuf,DataLen);	
 			memset(ucAESBuf,0,520);
 			if(status != SUCCESS)

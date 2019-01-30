@@ -36,9 +36,9 @@ int main(void)
 	u8 ucSendCount=0;
 //	u16 j;
 	u8 ucRestartFlag=0;
-	u8 ucReadyRec[8]={0x5A,0xA5,0x00,0x00,0xF2,0x01,0x00,0x00};
-	u8 ucUpdataSucess[9]={0x5A,0xA5,0x00,0x01,0xF3,0x01,0x00,0x01,0x00};
-	u8 ucUpdataFail[9]={0x5A,0xA5,0x00,0x01,0xF3,0x00,0x00,0x01,0x00};
+	u8 ucReadyRec[8]={0x5A,0xA5,0x00,0x00,0xF2,0x01,0x00,0x00}; //允许发送命令
+	u8 ucUpdataSucess[9]={0x5A,0xA5,0x00,0x01,0xF3,0x01,0x00,0x01,0x00};//升级成功指令
+	u8 ucUpdataFail[9]={0x5A,0xA5,0x00,0x01,0xF3,0x00,0x00,0x01,0x00};//升级失败指令
 
 	delay_100us(2000); 
 	delay_100us(2000);
@@ -46,35 +46,25 @@ int main(void)
 	delay_100us(2000);
 	
 	Sys_Init();	
-	printf("**bootloader**\r\n");
 	
-//	GPIO_ResetBits(GPIOA, GPIO_Pin_15);
-//	GPIO_ResetBits(GPIOB, GPIO_Pin_3);
-//	GPIO_ResetBits(GPIOB, GPIO_Pin_4);
-//	GPIO_ResetBits(GPIOB, GPIO_Pin_5);
-//	
-//	GPIO_SetBits(GPIOB, GPIO_Pin_3);
-//	GPIO_SetBits(GPIOB, GPIO_Pin_4);
-//	GPIO_SetBits(GPIOB, GPIO_Pin_5);
-//	GPIO_SetBits(GPIOA, GPIO_Pin_15);
+	#ifdef DEBUG
+		printf("\r\n");
+		printf("\r\n");
+		printf("**bootloader**\r\n");
+	#endif
+	
+
 
 //	FLASH_Unlock();
 //	FLASH_EraseAllPages();
 //	FLASH_Lock();
-//	delay_ms(1000);
-//	delay_ms(1000);
-//	delay_ms(1000);
-//	delay_ms(1000);
 
-//	iap_load_app(APP_FLASHAddr);
-//	Master_Send(ucReadyRec,8);
-//	while(1);
 //	printf("bootloader program!\r\n");
 //	FLASH_Unlock();
 //	FLASH_ErasePage(Symbol_FLASHAddr);
-//	FLASH_ProgramHalfWord(FlagAddr[0],0x01);
+//	FLASH_ProgramHalfWord(FlagAddr[0],0x00);
 //	FLASH_ProgramHalfWord(FlagAddr[1],0x00);
-//	FLASH_ProgramHalfWord(FlagAddr[2],0x01);
+//	FLASH_ProgramHalfWord(FlagAddr[2],0x00);
 //	FLASH_Lock();//上锁
 	
 	for(i=0;i<3;i++)
@@ -104,7 +94,7 @@ int main(void)
 				ucFlagVal[i]=(*(vu8*)FlagAddr[i]);
 			}
 			FLASH_ErasePage(Symbol_FLASHAddr);
-			FLASH_ProgramHalfWord(FlagAddr[0],0x01); //升级标志位置1
+			FLASH_ProgramHalfWord(FlagAddr[0],0x00); //升级标志位置1
 			FLASH_ProgramHalfWord(FlagAddr[1],0x00); //升级标志位清零。1：成功，0：失败
 			FLASH_ProgramHalfWord(FlagAddr[2],0x00); //拷贝标志为清0，该位最终由APP来置1
 			FLASH_Lock();			
@@ -152,7 +142,7 @@ int main(void)
 							TIM_Cmd(TIM6, DISABLE);
 							time=0;
 					
-						/*校验成功，并将数据存放在的APP地址区，地址：0x08004000开始*/
+							/*校验成功，并将数据存放在的APP地址区，地址：0x08004000开始*/
 							if(WriteAppData(applenth) == SUCCESS )
 							{
 //							#ifdef DEBUG
@@ -182,7 +172,7 @@ int main(void)
 									FLASH_ProgramHalfWord(FlagAddr[2],0x00);
 									FLASH_Lock();
 									#ifdef DEBUG
-										printf("**boot updata success**\r\n");
+										printf("**boot rec success**\r\n");
 									#endif
 									/*发送升级成功命令*/
 									g_ucSendFlag=0;
@@ -200,7 +190,26 @@ int main(void)
 										iap_load_app(APP_FLASHAddr);
 									#endif
 									#ifdef DEBUG
-										printf("**jump is fail**\r\n");
+										printf("**jump is fail，source is wrong!**\r\n");
+									#endif
+									
+									Factory_Reset();
+									delay_ms(1000);
+							
+									/*发送升级失败命令*/							
+									g_ucSendFlag=0;
+									for(ucSendCount=0; ucSendCount<3; ucSendCount++)
+									{
+										Master_Send(ucUpdataFail,9);
+										g_ucCmd=ucUpdataFail[4];
+										delay_ms(100);
+										if(g_ucSendFlag==1)
+											break;
+									}
+									memset(ucReciveBuffer,0,520);
+									/*升级失败*/ 
+									#ifdef LOAD_APP
+										iap_load_app(APP_FLASHAddr);
 									#endif
 								
 								}

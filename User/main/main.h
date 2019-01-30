@@ -7,7 +7,7 @@
 
 //调试接口
 #define LOAD_APP	1
-#define DEBUG	1
+//#define DEBUG	1
 
 /*Bootloader 16K*/
 #define Bootloader_FLASHAddr 			((u32)0x08000000)	//bootloader起始地址
